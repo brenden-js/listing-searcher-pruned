@@ -16,8 +16,8 @@ Things that could be improved upon:
 
 ## Things that would be good features for the future:
 
-- A leaderboard for seeing who has saved the most miles
-- A fraud detection engine to look for users gaming the system
-- Probably an entire different architecture to support serverless / event drive functionality
+- User notification for when a new listing is found, would just need to add an additional step to send an email using the SES or SNS SDK or other 3rd party email provider.
+- A step that checks whether to process or ignore the listing, based on if the agent of the house is already a customer, or has requested not to be contacted.
+- A better system that automatically updates the lambdas when a new commit is added to the repo.
 
 Thanks for looking!
