@@ -1,0 +1,126 @@
+{
+  "StartAt": "Scan - Find all available cities",
+  "States": {
+    "Scan - Find all available cities": {
+      "Type": "Task",
+      "Next": "Map - Process each city",
+      "Parameters": {
+        "TableName": "service-areas"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:dynamodb:scan"
+    },
+    "Map - Process each city": {
+      "Type": "Map",
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Lambda Invoke - Find New Listings in A City",
+        "States": {
+          "Lambda Invoke - Find New Listings in A City": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "OutputPath": "$.Payload",
+            "Parameters": {
+              "Payload.$": "$",
+              "FunctionName": "arn:aws:PRUNED"
+            },
+            "Retry": [
+              {
+                "ErrorEquals": [
+                  "States.ALL"
+                ],
+                "IntervalSeconds": 2,
+                "MaxAttempts": 6,
+                "BackoffRate": 2
+              }
+            ],
+            "Next": "Map - New Listing (no cache hit)"
+          },
+          "Map - New Listing (no cache hit)": {
+            "Type": "Map",
+            "ItemProcessor": {
+              "ProcessorConfig": {
+                "Mode": "INLINE"
+              },
+              "StartAt": "Lambda Invoke - Upsert Agent Meta Data via GraphQL API",
+              "States": {
+                "Lambda Invoke - Upsert Agent Meta Data via GraphQL API": {
+                  "Type": "Task",
+                  "Resource": "arn:aws:states:::lambda:invoke",
+                  "OutputPath": "$.Payload",
+                  "Parameters": {
+                    "Payload.$": "$",
+                    "FunctionName": "arn:aws:PRUNED"
+                  },
+                  "Retry": [
+                    {
+                      "ErrorEquals": [
+                        "States.ALL"
+                      ],
+                      "IntervalSeconds": 2,
+                      "MaxAttempts": 6,
+                      "BackoffRate": 2
+                    }
+                  ],
+                  "Comment": "Gets an agent from mongodb",
+                  "Next": "Lambda Invoke -  Create the Quote via GraphQL API"
+                },
+                "Lambda Invoke -  Create the Quote via GraphQL API": {
+                  "Type": "Task",
+                  "Resource": "arn:aws:states:::lambda:invoke",
+                  "OutputPath": "$.Payload",
+                  "Parameters": {
+                    "Payload.$": "$",
+                    "FunctionName": "arn:aws:PRUNED"
+                  },
+                  "Retry": [
+                    {
+                      "ErrorEquals": [
+                        "Lambda.ServiceException",
+                        "Lambda.AWSLambdaException",
+                        "Lambda.SdkClientException",
+                        "Lambda.TooManyRequestsException"
+                      ],
+                      "IntervalSeconds": 2,
+                      "MaxAttempts": 6,
+                      "BackoffRate": 2
+                    }
+                  ],
+                  "Next": "PutItem - Listing Cache"
+                },
+                "PutItem - Listing Cache": {
+                  "Type": "Task",
+                  "Resource": "arn:aws:states:::dynamodb:putItem",
+                  "Parameters": {
+                    "TableName": "new-listings-cache",
+                    "Item": {
+                      "id": {
+                        "S.$": "$.source.listing_id"
+                      },
+                      "line": {
+                        "S.$": "$.location.address.line"
+                      },
+                      "list_date": {
+                        "S.$": "$.list_date"
+                      },
+                      "city": {
+                        "S.$": "$.location.address.city"
+                      }
+                    }
+                  },
+                  "End": true
+                }
+              }
+            },
+            "End": true
+          }
+        }
+      },
+      "End": true,
+      "ItemsPath": "$",
+      "InputPath": "$.Items"
+    }
+  },
+  "Comment": "Scans service areas for new listings, and then sends to other service."
+}

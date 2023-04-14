@@ -1,0 +1,8 @@
+{
+  "name": "lambda-new-listing-event-handler",
+  "version": "1.0.0",
+  "dependencies": {
+    "@apollo/client": "^3.7.3",
+    "cross-fetch": "^3.1.5"
+  }
+}
